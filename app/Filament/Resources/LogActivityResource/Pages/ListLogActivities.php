@@ -74,7 +74,7 @@ class ListLogActivities extends ListRecords
     }
 
 
-    protected function getHeaderWidgetsColumns(): int|array
+    public function getHeaderWidgetsColumns(): int | array
     {
         return [
             'default' => 1,   // mobile: 1 kolom
