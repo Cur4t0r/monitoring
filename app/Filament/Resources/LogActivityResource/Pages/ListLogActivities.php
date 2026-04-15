@@ -8,7 +8,6 @@ use App\Filament\Resources\LogActivityResource\Widgets\MonthlyBandwidthChart;
 use App\Filament\Resources\LogActivityResource\Widgets\WeeklyBandwidthChart;
 use App\Filament\Resources\LogActivityResource\Widgets\YearlyBandwidthChart;
 use App\Models\Opd;
-// use App\Filament\Resources\LogActivityResource\Widgets\BandwidthTrafficChart;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Resources\Pages\ListRecords;
@@ -20,13 +19,6 @@ class ListLogActivities extends ListRecords
     public ?int $opdId = null;
 
     public string $opdName = 'Semua OPD';
-
-    // protected function getHeaderActions(): array
-    // {
-    //     return [
-    //         Actions\CreateAction::make(),
-    //     ];
-    // }
 
     protected function getHeaderActions(): array
     {
@@ -69,7 +61,6 @@ class ListLogActivities extends ListRecords
             WeeklyBandwidthChart::class,
             MonthlyBandwidthChart::class,
             YearlyBandwidthChart::class,
-            // BandwidthTrafficChart::class,
         ];
     }
 

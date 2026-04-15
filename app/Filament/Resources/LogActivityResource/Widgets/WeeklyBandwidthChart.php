@@ -3,17 +3,24 @@
 namespace App\Filament\Resources\LogActivityResource\Widgets;
 
 use App\Models\LogActivity;
-// use Filament\Widgets\ChartWidget;
+use Carbon\Carbon;
 
 class WeeklyBandwidthChart extends BaseBandwidthChart
 {
     protected static ?string $heading = 'Mingguan';
 
+    protected function getPeriodStart(): Carbon
+    {
+        return now()->subWeek();
+    }
+
     protected function getData(): array
     {
+        $from = $this->getPeriodStart();
+
         $data = LogActivity::query()
             ->when($this->opdId, fn($q) => $q->where('opd_id', $this->opdId))
-            ->where('timestamp', '>=', now()->subWeek())
+            ->where('timestamp', '>=', $from)
             ->selectRaw("
                 DATE(timestamp)                 AS sort_time,
                 DATE_FORMAT(timestamp, '%d %b') AS label,
@@ -24,15 +31,6 @@ class WeeklyBandwidthChart extends BaseBandwidthChart
             ->orderBy('sort_time')
             ->get();
 
-        return $this->buildDataset($data);
-
-        // return [
-        //     //
-        // ];
+        return $this->buildDataset($data, $from);
     }
-
-    // protected function getType(): string
-    // {
-    //     return 'line';
-    // }
 }

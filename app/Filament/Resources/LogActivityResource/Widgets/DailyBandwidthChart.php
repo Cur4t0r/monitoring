@@ -3,17 +3,24 @@
 namespace App\Filament\Resources\LogActivityResource\Widgets;
 
 use App\Models\LogActivity;
-// use Filament\Widgets\ChartWidget;
+use Carbon\Carbon;
 
 class DailyBandwidthChart extends BaseBandwidthChart
 {
     protected static ?string $heading = 'Harian';
 
+    protected function getPeriodStart(): Carbon
+    {
+        return now()->subDay();
+    }
+
     protected function getData(): array
     {
+        $from = $this->getPeriodStart();
+
         $data = LogActivity::query()
             ->when($this->opdId, fn($q) => $q->where('opd_id', $this->opdId))
-            ->where('timestamp', '>=', now()->subDay())
+            ->where('timestamp', '>=', $from)
             ->selectRaw("
                 DATE_FORMAT(timestamp, '%Y-%m-%d %H:00:00') AS sort_time,
                 DATE_FORMAT(timestamp, '%H:00')             AS label,
@@ -24,15 +31,6 @@ class DailyBandwidthChart extends BaseBandwidthChart
             ->orderBy('sort_time')
             ->get();
 
-        return $this->buildDataset($data);
-
-        // return [
-        //     //
-        // ];
+        return $this->buildDataset($data, $from);
     }
-
-    // protected function getType(): string
-    // {
-    //     return 'line';
-    // }
 }

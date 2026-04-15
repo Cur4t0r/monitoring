@@ -2,16 +2,15 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Exports\LogActivityExporter;
 use App\Filament\Resources\LogActivityResource\Pages;
-// use App\Filament\Resources\LogActivityResource\RelationManagers;
 use App\Models\LogActivity;
-// use Filament\Forms;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-// use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class LogActivityResource extends Resource
 {
@@ -28,28 +27,7 @@ class LogActivityResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                //
-                // Forms\Components\Select::make('opd_id')
-                //     ->label('OPD')
-                //     ->relationship('opd', 'nama_opd')
-                //     ->searchable()
-                //     ->required(),
-
-                // Forms\Components\TextInput::make('in_bps')
-                //     ->label('Inbound (bps)')
-                //     ->numeric()
-                //     ->required(),
-
-                // Forms\Components\TextInput::make('out_bps')
-                //     ->label('Outbound (bps)')
-                //     ->numeric()
-                //     ->required(),
-
-                // Forms\Components\DateTimePicker::make('timestamp')
-                //     ->label('Waktu Pencatatan')
-                //     ->required(),
-            ]);
+            ->schema([]);
     }
 
     public static function canCreate(): bool
@@ -91,22 +69,12 @@ class LogActivityResource extends Resource
                     ->badge()
                     ->color('info')
                     ->sortable(query: fn(Builder $query, string $direction) => $query->orderBy('in_bps', $direction)),
-                // ->formatStateUsing(
-                //     fn($state) =>
-                //     number_format($state / 1_000_000, 2) . ' Mbps'
-                // )
-                // ->sortable(),
 
                 Tables\Columns\TextColumn::make('out_mbps')
                     ->label('Outbound')
                     ->badge()
                     ->color('success')
                     ->sortable(query: fn(Builder $query, string $direction) => $query->orderBy('out_bps', $direction)),
-                // ->formatStateUsing(
-                //     fn($state) =>
-                //     number_format($state / 1_000_000, 2) . ' Mbps'
-                // )
-                // ->sortable(),
 
                 Tables\Columns\TextColumn::make('timestamp')
                     ->label('Waktu')
@@ -122,39 +90,35 @@ class LogActivityResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
+            ->headerActions([
+                // ---------------------------------------------------------------
+                // Export ke Excel / CSV
+                // Catatan setup:
+                //   1. php artisan vendor:publish --tag="filament-actions-migrations"
+                //   2. php artisan migrate
+                //   3. Pastikan QUEUE_CONNECTION di .env diset (bisa 'sync' untuk dev)
+                // ---------------------------------------------------------------
+                Tables\Actions\ExportAction::make()
+                    ->label('Export Excel')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->exporter(LogActivityExporter::class)
+                    ->formats([
+                        ExportFormat::Xlsx,
+                        ExportFormat::Csv,
+                    ]),
+            ])
             ->actions([
-                // Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('detail')
                     ->label('Detail')
                     ->icon('heroicon-o-eye')
-                    // ->modalHeading('Detail Pemakaian Bandwidth')
                     ->color('primary')
                     ->modalHeading(fn($record) => 'Detail Bandwidth - ' . $record->opd->nama_opd)
                     ->modalWidth('4xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
-                    // ->modalContent(
-                    //     fn($record) =>
-                    //     view('filament.log-activity.detail', [
-                    //         'opd' => $record->opd,
-                    //     ])
-                    // ),
                     ->modalContent(function ($record) {
                         $opd = $record->opd;
-
-                        // $stats = [
-                        //     'max_in' => $opd->logActivities()->max('in_bps') ?? 0,
-                        //     'avg_in' => $opd->logActivities()->avg('in_bps') ?? 0,
-                        //     'current_in' => optional(
-                        //         $opd->logActivities()->latest('timestamp')->first()
-                        //     )->in_bps ?? 0,
-
-                        //     'max_out' => $opd->logActivities()->max('out_bps') ?? 0,
-                        //     'avg_out' => $opd->logActivities()->avg('out_bps') ?? 0,
-                        //     'current_out' => optional(
-                        //         $opd->logActivities()->latest('timestamp')->first()
-                        //     )->out_bps ?? 0,
-                        // ];
 
                         $aggregate = $opd->logActivities()
                             ->selectRaw('
@@ -187,9 +151,15 @@ class LogActivityResource extends Resource
 
             ])
             ->bulkActions([
-                // Tables\Actions\BulkActionGroup::make([
-                //     Tables\Actions\DeleteBulkAction::make(),
-                // ]),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\ExportBulkAction::make()
+                        ->label('Export Dipilih')
+                        ->exporter(LogActivityExporter::class)
+                        ->formats([
+                            ExportFormat::Xlsx,
+                            ExportFormat::Csv,
+                        ]),
+                ]),
             ]);
     }
 
@@ -204,8 +174,6 @@ class LogActivityResource extends Resource
     {
         return [
             'index' => Pages\ListLogActivities::route('/'),
-            // 'create' => Pages\CreateLogActivity::route('/create'),
-            // 'edit' => Pages\EditLogActivity::route('/{record}/edit'),
         ];
     }
 }
