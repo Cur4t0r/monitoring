@@ -2,15 +2,19 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Exports\LogActivityExporter;
+use App\Exports\RekapBandwidthExport;
+// use App\Filament\Exports\LogActivityExporter;
 use App\Filament\Resources\LogActivityResource\Pages;
 use App\Models\LogActivity;
-use Filament\Actions\Exports\Enums\ExportFormat;
+use Filament\Forms\Components\CheckboxList;
+// use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LogActivityResource extends Resource
 {
@@ -98,15 +102,64 @@ class LogActivityResource extends Resource
                 //   2. php artisan migrate
                 //   3. Pastikan QUEUE_CONNECTION di .env diset (bisa 'sync' untuk dev)
                 // ---------------------------------------------------------------
-                Tables\Actions\ExportAction::make()
-                    ->label('Export Excel')
+                Tables\Actions\ExportAction::make('rekapBandwidth')
+                    ->label('Rekap Bandwidth')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->exporter(LogActivityExporter::class)
-                    ->formats([
-                        ExportFormat::Xlsx,
-                        ExportFormat::Csv,
-                    ]),
+                    ->modalHeading('Export Rekap Pemakaian Bandwidth')
+                    ->modalDescription('Pilih periode yang ingin diekspor. Setiap periode akan menjadi sheet terpisah dalam satu file Excel.')
+                    ->modalWidth('md')
+                    ->modalSubmitActionLabel('Download Excel')
+                    ->form([
+                        CheckboxList::make('periods')
+                            ->label('Periode')
+                            ->options([
+                                'daily'   => 'Harian (24 Jam Terakhir)',
+                                'weekly'  => 'Mingguan (7 Hari Terakhir)',
+                                'monthly' => 'Bulanan (30 Hari Terakhir)',
+                                'yearly'  => 'Tahunan (12 Bulan Terakhir)',
+                            ])
+                            ->default(['daily', 'weekly', 'monthly', 'yearly'])
+                            ->columns(1)
+                            ->required()
+                            ->rules(['min:1'])
+                            ->validationMessages([
+                                'min' => 'Pilih minimal satu periode.',
+                            ]),
+                    ])
+                    ->action(function (array $data): mixed {
+                        $periods = $data['periods'] ?? [];
+
+                        if (empty($periods)) {
+                            Notification::make()
+                                ->title('Pilih minimal satu periode')
+                                ->warning()
+                                ->send();
+
+                            return null;
+                        }
+
+                        // Urutkan sesuai urutan logis (bukan urutan klik user)
+                        $order   = ['daily', 'weekly', 'monthly', 'yearly'];
+                        $sorted  = array_values(
+                            array_filter($order, fn($p) => in_array($p, $periods))
+                        );
+
+                        // Nama file menyertakan tanggal dan periode yang dipilih
+                        $labels   = [
+                            'daily'   => 'Harian',
+                            'weekly'  => 'Mingguan',
+                            'monthly' => 'Bulanan',
+                            'yearly'  => 'Tahunan',
+                        ];
+                        $suffix   = implode('-', array_map(fn($p) => $labels[$p], $sorted));
+                        $filename = 'Rekap-Bandwidth-' . $suffix . '-' . now()->format('Ymd') . '.xlsx';
+
+                        return Excel::download(
+                            new RekapBandwidthExport($sorted),
+                            $filename
+                        );
+                    }),
             ])
             ->actions([
                 Tables\Actions\Action::make('detail')
@@ -151,15 +204,7 @@ class LogActivityResource extends Resource
 
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\ExportBulkAction::make()
-                        ->label('Export Dipilih')
-                        ->exporter(LogActivityExporter::class)
-                        ->formats([
-                            ExportFormat::Xlsx,
-                            ExportFormat::Csv,
-                        ]),
-                ]),
+                //
             ]);
     }
 
