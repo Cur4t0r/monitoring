@@ -44,7 +44,20 @@ class LogActivitySeeder extends Seeder
             $base = $this->opdBaseMap[$opd->id];
 
             // ------------------------------------------------------------------
-            // Segmen 1: 24 jam – 7 hari lalu → setiap 30 menit (chart MINGGUAN)
+            // Segmen 1: 24 jam terakhir → setiap 5 menit (chart HARIAN)
+            // Ini yang sebelumnya tidak diisi — sekarang langsung penuh.
+            // ------------------------------------------------------------------
+            $this->fillSegment(
+                $rows,
+                $opd->id,
+                $base,
+                from: $now->copy()->subDay(),
+                until: $now,
+                interval: 5
+            );
+
+            // ------------------------------------------------------------------
+            // Segmen 2: 24 jam – 7 hari lalu → setiap 30 menit (chart MINGGUAN)
             // ------------------------------------------------------------------
             $this->fillSegment(
                 $rows,
@@ -56,7 +69,7 @@ class LogActivitySeeder extends Seeder
             );
 
             // ------------------------------------------------------------------
-            // Segmen 2: 7 hari – 30 hari lalu → setiap 1 jam (chart BULANAN)
+            // Segmen 3: 7 hari – 30 hari lalu → setiap 1 jam (chart BULANAN)
             // ------------------------------------------------------------------
             $this->fillSegment(
                 $rows,
@@ -68,7 +81,7 @@ class LogActivitySeeder extends Seeder
             );
 
             // ------------------------------------------------------------------
-            // Segmen 3: 30 hari – 1 tahun lalu → setiap 6 jam (chart TAHUNAN)
+            // Segmen 4: 30 hari – 1 tahun lalu → setiap 6 jam (chart TAHUNAN)
             // ------------------------------------------------------------------
             $this->fillSegment(
                 $rows,
@@ -87,8 +100,9 @@ class LogActivitySeeder extends Seeder
         }
 
         $this->command->getOutput()->progressFinish();
-        $this->command->info('Seeder selesai. Jalankan scheduler untuk data harian:');
-        $this->command->line('  php artisan schedule:work');
+        $this->command->info('Seeder selesai — semua chart langsung terisi.');
+        $this->command->line('Jalankan scheduler agar data terus bertambah setiap 5 menit:');
+        $this->command->line('php artisan schedule:work');
     }
 
     // -------------------------------------------------------------------------
@@ -105,13 +119,11 @@ class LogActivitySeeder extends Seeder
     ): void {
         $nowStr = now()->toDateTimeString();
         $cur    = $from->copy();
-
         // Cache multiplier musiman per bulan agar konsisten dalam satu segmen
         $seasonalCache = [];
 
         while ($cur->lessThan($until)) {
-            $multiplier = $this->getMultiplier($cur, $baseBps, $seasonalCache);
-
+            $multiplier = $this->getMultiplier($cur, $seasonalCache);
             // In dan Out punya noise independen → variatif satu sama lain
             $inBps  = max(100_000, (int) ($baseBps * $multiplier * $this->noise()));
             $outBps = max(100_000, (int) ($baseBps * $multiplier * 0.4 * $this->noise())); // out ~40% dari in
@@ -133,7 +145,7 @@ class LogActivitySeeder extends Seeder
     // Hitung multiplier berdasarkan jam, hari, dan bulan
     // -------------------------------------------------------------------------
 
-    private function getMultiplier(Carbon $dt, float $base, array &$seasonalCache): float
+    private function getMultiplier(Carbon $dt, array &$seasonalCache): float
     {
         // 1. FAKTOR JAM — jam sibuk 08-17 tinggi, subuh rendah
         $hour        = (int) $dt->format('H');
