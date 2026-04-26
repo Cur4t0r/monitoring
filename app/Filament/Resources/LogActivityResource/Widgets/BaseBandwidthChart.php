@@ -10,44 +10,33 @@ use Livewire\Attributes\On;
 
 abstract class BaseBandwidthChart extends ChartWidget
 {
-
     public ?int $opdId = null;
 
-    /** Cache statistik yang dihitung saat getData() dipanggil. */
     protected array $stats = [];
 
-    /**
-     * Setiap chart mengambil setengah lebar halaman (2 kolom → grid 2×2).
-     */
     protected int | string | array $columnSpan = 1;
 
-    /**
-     * Titik awal periode yang ditampilkan chart (misal: now()->subDay()).
-     * Digunakan untuk menghitung stats footer agar konsisten dengan data chart.
-     */
     abstract protected function getPeriodStart(): Carbon;
 
     // -------------------------------------------------------------------------
-    // Listener event Livewire
+    // Listener event OPD
     // -------------------------------------------------------------------------
 
-    /**
-     * Dipanggil ketika user memilih OPD di header halaman.
-     * Livewire otomatis trigger re-render → getData() dipanggil ulang.
-     */
     #[On('opdFilterUpdated')]
     public function updateOpdFilter(?int $opdId): void
     {
         $this->opdId = $opdId;
     }
 
+    // -------------------------------------------------------------------------
+    // Hitung stats Max / Avg / Current untuk periode aktif
+    // -------------------------------------------------------------------------
+
     protected function computeStats(Carbon $from): array
     {
-        $baseQuery = fn() => LogActivity::query()
+        $agg = LogActivity::query()
             ->when($this->opdId, fn($q) => $q->where('opd_id', $this->opdId))
-            ->where('timestamp', '>=', $from);
-
-        $agg = $baseQuery()
+            ->where('timestamp', '>=', $from)
             ->selectRaw('
                 MAX(in_bps)  AS max_in,
                 AVG(in_bps)  AS avg_in,
@@ -56,7 +45,6 @@ abstract class BaseBandwidthChart extends ChartWidget
             ')
             ->first();
 
-        // "Current" = nilai terbaru keseluruhan (tidak dibatasi $from)
         $latest = LogActivity::query()
             ->when($this->opdId, fn($q) => $q->where('opd_id', $this->opdId))
             ->latest('timestamp')
@@ -73,7 +61,7 @@ abstract class BaseBandwidthChart extends ChartWidget
     }
 
     // -------------------------------------------------------------------------
-    // Smart formatter — tampilkan Kbps jika < 1 Mbps (mirip MRTG)
+    // Smart formatter Kbps / Mbps
     // -------------------------------------------------------------------------
 
     protected function formatBps(float $bps): string
@@ -90,17 +78,12 @@ abstract class BaseBandwidthChart extends ChartWidget
     }
 
     // -------------------------------------------------------------------------
-    // Footer chart — ditampilkan di bawah canvas (seperti teks di bawah MRTG)
+    // Footer — Max / Avg / Current di bawah canvas
     // -------------------------------------------------------------------------
 
     public function getFooter(): HtmlString
     {
-        $s = $this->stats;
-
-        // Jika stats belum terisi (render pertama sebelum getData), isi dulu
-        if (empty($s)) {
-            $s = $this->computeStats($this->getPeriodStart());
-        }
+        $s = $this->stats ?: $this->computeStats($this->getPeriodStart());
 
         $row = fn(string $dir, string $color, float $max, float $avg, float $cur): string =>
         <<<HTML
@@ -120,23 +103,20 @@ abstract class BaseBandwidthChart extends ChartWidget
             </div>
             HTML;
 
-        $html = <<<HTML
+        return new HtmlString(<<<HTML
         <div class="px-4 pb-4 pt-1 space-y-1 border-t border-white/10 mt-2">
             {$row('In',  '#3b82f6',$s['max_in'],$s['avg_in'],$s['current_in'])}
             {$row('Out', '#22c55e',$s['max_out'],$s['avg_out'],$s['current_out'])}
         </div>
-        HTML;
-
-        return new HtmlString($html);
+        HTML);
     }
 
     // -------------------------------------------------------------------------
-    // Helper — membangun format datasets untuk Chart.js
+    // Build dataset + isi $this->stats sebagai side-effect
     // -------------------------------------------------------------------------
 
     protected function buildDataset(iterable $rows, Carbon $from): array
     {
-        // Isi stats saat membangun data → satu render = satu kali query stats
         $this->stats = $this->computeStats($from);
 
         $col = collect($rows);
@@ -145,7 +125,7 @@ abstract class BaseBandwidthChart extends ChartWidget
             'datasets' => [
                 [
                     'label'           => 'Inbound (Mbps)',
-                    'data'            => $col->map(fn($r) => round(($r->avg_in ?? 0) / 1_000_000, 2))->toArray(),
+                    'data'            => $col->map(fn($r) => round(($r->avg_in  ?? 0) / 1_000_000, 2))->toArray(),
                     'borderColor'     => '#3b82f6',
                     'backgroundColor' => 'rgba(59,130,246,0.08)',
                     'fill'            => true,
@@ -168,6 +148,9 @@ abstract class BaseBandwidthChart extends ChartWidget
         ];
     }
 
+    // -------------------------------------------------------------------------
+    // Chart.js options — Y-axis dengan stepSize 5 Mbps
+    // -------------------------------------------------------------------------
 
     protected function getType(): string
     {
@@ -179,10 +162,7 @@ abstract class BaseBandwidthChart extends ChartWidget
         return [
             'responsive'          => true,
             'maintainAspectRatio' => false,
-            'interaction'         => [
-                'mode'      => 'index',
-                'intersect' => false,
-            ],
+            'interaction'         => ['mode' => 'index', 'intersect' => false],
             'plugins' => [
                 'legend'  => ['display' => true, 'position' => 'top'],
                 'tooltip' => ['mode' => 'index', 'intersect' => false],
