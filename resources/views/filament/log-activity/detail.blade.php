@@ -1,33 +1,3 @@
-{{-- <div class="space-y-6">
-    <h2 class="text-xl font-bold">
-        {{ $opd->nama_opd }}
-    </h2>
-
-    <div class="grid grid-cols-3 gap-4">
-        <div class="p-4 bg-gray-400 rounded">
-            <p class="text-sm">Max In</p>
-            <p class="text-lg font-bold">
-                {{ number_format($opd->logActivities()->max('in_bps') / 1_000_000, 2) }} Mbps
-            </p>
-        </div>
-
-        <div class="p-4 bg-gray-400 rounded">
-            <p class="text-sm">Average In</p>
-            <p class="text-lg font-bold">
-                {{ number_format($opd->logActivities()->avg('in_bps') / 1_000_000, 2) }} Mbps
-            </p>
-        </div>
-
-        <div class="p-4 bg-gray-400 rounded">
-            <p class="text-sm">Current In</p>
-            <p class="text-lg font-bold">
-                {{ number_format(optional($opd->logActivities()->latest('timestamp')->first())->in_bps / 1_000_000, 2) }}
-                Mbps
-            </p>
-        </div>
-    </div>
-</div> --}}
-
 <div class="space-y-6">
     <div>
         <h2 class="text-2xl font-bold text-gray-800">

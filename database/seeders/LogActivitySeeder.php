@@ -45,7 +45,6 @@ class LogActivitySeeder extends Seeder
 
             // ------------------------------------------------------------------
             // Segmen 1: 24 jam terakhir → setiap 5 menit (chart HARIAN)
-            // Ini yang sebelumnya tidak diisi — sekarang langsung penuh.
             // ------------------------------------------------------------------
             $this->fillSegment(
                 $rows,

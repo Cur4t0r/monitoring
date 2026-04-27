@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\Opd;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Opd;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class OpdSeeder extends Seeder
 {
@@ -14,6 +16,8 @@ class OpdSeeder extends Seeder
     public function run(): void
     {
         //
+        Schema::disableForeignKeyConstraints();
+        DB::table('opds')->truncate();
         Opd::factory(10)->create();
     }
 }

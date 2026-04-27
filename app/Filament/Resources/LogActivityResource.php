@@ -3,11 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Exports\RekapBandwidthExport;
-// use App\Filament\Exports\LogActivityExporter;
 use App\Filament\Resources\LogActivityResource\Pages;
 use App\Models\LogActivity;
 use Filament\Forms\Components\CheckboxList;
-// use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -96,11 +94,7 @@ class LogActivityResource extends Resource
             ])
             ->headerActions([
                 // ---------------------------------------------------------------
-                // Export ke Excel / CSV
-                // Catatan setup:
-                //   1. php artisan vendor:publish --tag="filament-actions-migrations"
-                //   2. php artisan migrate
-                //   3. Pastikan QUEUE_CONNECTION di .env diset (bisa 'sync' untuk dev)
+                // Export ke Excel dengan pilihan periode (Harian, Mingguan, Bulanan, Tahunan)
                 // ---------------------------------------------------------------
                 Tables\Actions\ExportAction::make('rekapBandwidth')
                     ->label('Rekap Bandwidth')

@@ -2,36 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Models\LogActivity;
+// use App\Models\LogActivity;
 use App\Models\Opd;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 class GenerateLogActivity extends Command
 {
-    // /**
-    //  * The name and signature of the console command.
-    //  *
-    //  * @var string
-    //  */
-    // protected $signature = 'app:generate-log-activity';
-
-    // /**
-    //  * The console command description.
-    //  *
-    //  * @var string
-    //  */
-    // protected $description = 'Command description';
-
-    // /**
-    //  * Execute the console command.
-    //  */
-    // public function handle()
-    // {
-    //     //
-    // }
-
-
     /**
      * Nama & signature command.
      * Bisa dijalankan manual: php artisan log:generate
