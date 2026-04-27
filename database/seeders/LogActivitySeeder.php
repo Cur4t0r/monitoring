@@ -15,7 +15,7 @@ use Carbon\Carbon;
  *  - VARIASI MUSIM : Random multiplier per bulan (simulasi event/proyek besar)
  *  - NOISE         : ±30% random agar tidak terlihat terlalu pola
  *
- * Data harian (24 jam terakhir) TIDAK diisi seeder —
+ * Data harian (24 jam terakhir)
  * diisi oleh scheduler log:generate setiap 5 menit.
  */
 class LogActivitySeeder extends Seeder
