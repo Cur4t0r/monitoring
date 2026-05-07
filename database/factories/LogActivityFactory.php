@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Opd;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,9 +19,15 @@ class LogActivityFactory extends Factory
     {
         return [
             //
-            'timestamp' => now(),
-            'in_bps' => fake()->numberBetween(200_000, 50_000_000),
-            'out_bps' => fake()->numberBetween(200_000, 50_000_000),
+            'opd_id'    => Opd::factory(),
+
+            // Timestamp acak dalam rentang 1 tahun terakhir
+            // Seeder akan meng-override dengan timestamp yang sudah dipola
+            'timestamp' => fake()->dateTimeBetween('-1 year', 'now'),
+
+            // Range bandwidth realistis: 0.3 – 40 Mbps
+            'in_bps'    => fake()->numberBetween(300_000, 40_000_000),
+            'out_bps'   => fake()->numberBetween(300_000, 40_000_000),
         ];
     }
 }

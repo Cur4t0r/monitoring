@@ -32,10 +32,7 @@ class RekapBandwidthSheet implements
         protected int $startNo = 1
     ) {}
 
-    // -------------------------------------------------------------------------
-    // Judul sheet
-    // -------------------------------------------------------------------------
-
+    // Judul sheet sesuai periode (Harian, Mingguan, Bulanan, Tahunan)
     public function title(): string
     {
         return match ($this->period) {
@@ -47,10 +44,7 @@ class RekapBandwidthSheet implements
         };
     }
 
-    // -------------------------------------------------------------------------
     // Header kolom (baris pertama tabel)
-    // -------------------------------------------------------------------------
-
     public function headings(): array
     {
         $periodLabel = match ($this->period) {
@@ -70,10 +64,7 @@ class RekapBandwidthSheet implements
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // Data baris
-    // -------------------------------------------------------------------------
-
+    // Data baris per OPD untuk periode aktif (diambil dari DB dengan query aggregate)
     public function collection(): Collection
     {
         $from = $this->getPeriodStart();
@@ -128,10 +119,7 @@ class RekapBandwidthSheet implements
         return $rows;
     }
 
-    // -------------------------------------------------------------------------
     // Styling sheet (header warna, border, merge judul)
-    // -------------------------------------------------------------------------
-
     public function styles(Worksheet $sheet): void
     {
         $lastRow  = $sheet->getHighestRow();
@@ -194,10 +182,7 @@ class RekapBandwidthSheet implements
         $sheet->freezePane('A3');
     }
 
-    // -------------------------------------------------------------------------
-    // Helper
-    // -------------------------------------------------------------------------
-
+    // Helpers
     protected function getPeriodStart(): Carbon
     {
         return match ($this->period) {

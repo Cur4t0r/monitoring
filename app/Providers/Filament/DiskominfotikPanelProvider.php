@@ -27,7 +27,7 @@ class DiskominfotikPanelProvider extends PanelProvider
             ->default()
             ->id('diskominfotik')
             ->path('diskominfotik')
-            ->brandName('Diskominfotik')
+            ->brandName('SIMONJA Diskominfotik')
             ->login()
             ->colors([
                 'primary' => Color::Amber,

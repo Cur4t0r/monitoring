@@ -19,5 +19,6 @@ class OpdSeeder extends Seeder
         Schema::disableForeignKeyConstraints();
         DB::table('opds')->truncate();
         Opd::factory(10)->create();
+        Schema::enableForeignKeyConstraints();
     }
 }

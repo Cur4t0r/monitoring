@@ -28,9 +28,6 @@ class ListLogActivities extends ListRecords
     {
         return [
             Action::make('filterOpd')
-                // FIX: gunakan closure agar label dievaluasi ulang setiap render,
-                // bukan hanya saat mount. Tanpa closure, nilai string di-capture
-                // sekali pada saat getHeaderActions() dipanggil pertama kali.
                 ->label(fn(): string => 'OPD: ' . $this->opdName)
                 ->icon('heroicon-o-building-office-2')
                 ->color(fn(): string => $this->opdId ? 'primary' : 'gray')
