@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LogActivityResource\Widgets;
 
+use App\Helpers\BandwidthFormatter;
 use App\Models\LogActivity;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
@@ -18,20 +19,14 @@ abstract class BaseBandwidthChart extends ChartWidget
 
     abstract protected function getPeriodStart(): Carbon;
 
-    // -------------------------------------------------------------------------
-    // Listener event OPD
-    // -------------------------------------------------------------------------
-
+    // Listener event OPD filter dari dropdown di header=
     #[On('opdFilterUpdated')]
     public function updateOpdFilter(?int $opdId): void
     {
         $this->opdId = $opdId;
     }
 
-    // -------------------------------------------------------------------------
     // Hitung stats Max / Avg / Current untuk periode aktif
-    // -------------------------------------------------------------------------
-
     protected function computeStats(Carbon $from): array
     {
         $agg = LogActivity::query()
@@ -51,30 +46,13 @@ abstract class BaseBandwidthChart extends ChartWidget
             ->first();
 
         return [
-            'max_in'      => (float) ($agg->max_in  ?? 0),
-            'avg_in'      => (float) ($agg->avg_in  ?? 0),
-            'current_in'  => (float) ($latest->in_bps  ?? 0),
-            'max_out'     => (float) ($agg->max_out ?? 0),
-            'avg_out'     => (float) ($agg->avg_out ?? 0),
-            'current_out' => (float) ($latest->out_bps ?? 0),
+            'max_in'      => BandwidthFormatter::format((float) ($agg->max_in  ?? 0)),
+            'avg_in'      => BandwidthFormatter::format((float) ($agg->avg_in  ?? 0)),
+            'current_in'  => BandwidthFormatter::format((float) ($latest->in_bps  ?? 0)),
+            'max_out'     => BandwidthFormatter::format((float) ($agg->max_out ?? 0)),
+            'avg_out'     => BandwidthFormatter::format((float) ($agg->avg_out ?? 0)),
+            'current_out' => BandwidthFormatter::format((float) ($latest->out_bps ?? 0)),
         ];
-    }
-
-    // -------------------------------------------------------------------------
-    // Smart formatter Kbps / Mbps
-    // -------------------------------------------------------------------------
-
-    protected function formatBps(float $bps): string
-    {
-        if ($bps >= 1_000_000) {
-            return number_format($bps / 1_000_000, 2) . ' Mbps';
-        }
-
-        if ($bps >= 1_000) {
-            return number_format($bps / 1_000, 2) . ' Kbps';
-        }
-
-        return number_format($bps, 0) . ' bps';
     }
 
     // -------------------------------------------------------------------------
@@ -85,36 +63,33 @@ abstract class BaseBandwidthChart extends ChartWidget
     {
         $s = $this->stats ?: $this->computeStats($this->getPeriodStart());
 
-        $row = fn(string $dir, string $color, float $max, float $avg, float $cur): string =>
+        $row = fn(string $dir, string $color): string =>
         <<<HTML
             <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 <span>
                     <span class="font-semibold" style="color:{$color}">Max {$dir}:</span>
-                    <span class="text-gray-300">{$this->formatBps($max)}</span>
+                    <span class="text-gray-300">{$s['max_' . strtolower($dir)]}</span>
                 </span>
                 <span>
                     <span class="font-semibold" style="color:{$color}">Average {$dir}:</span>
-                    <span class="text-gray-300">{$this->formatBps($avg)}</span>
+                    <span class="text-gray-300">{$s['avg_' . strtolower($dir)]}</span>
                 </span>
                 <span>
                     <span class="font-semibold" style="color:{$color}">Current {$dir}:</span>
-                    <span class="text-gray-300">{$this->formatBps($cur)}</span>
+                    <span class="text-gray-300">{$s['current_' . strtolower($dir)]}</span>
                 </span>
             </div>
             HTML;
 
         return new HtmlString(<<<HTML
         <div class="px-4 pb-4 pt-1 space-y-1 border-t border-white/10 mt-2">
-            {$row('In',  '#3b82f6',$s['max_in'],$s['avg_in'],$s['current_in'])}
-            {$row('Out', '#22c55e',$s['max_out'],$s['avg_out'],$s['current_out'])}
+            {$row('In',  '#3b82f6')}
+            {$row('Out', '#22c55e')}
         </div>
         HTML);
     }
 
-    // -------------------------------------------------------------------------
     // Build dataset + isi $this->stats sebagai side-effect
-    // -------------------------------------------------------------------------
-
     protected function buildDataset(iterable $rows, Carbon $from): array
     {
         $this->stats = $this->computeStats($from);
@@ -147,10 +122,6 @@ abstract class BaseBandwidthChart extends ChartWidget
             'labels' => $col->pluck('label')->toArray(),
         ];
     }
-
-    // -------------------------------------------------------------------------
-    // Chart.js options — Y-axis dengan stepSize 5 Mbps
-    // -------------------------------------------------------------------------
 
     protected function getType(): string
     {

@@ -37,17 +37,13 @@ class OpdStatusOverview extends BaseWidget
             : 0;
 
         return [
-            // ------------------------------------------------------------------
             // Total OPD terdaftar
-            // ------------------------------------------------------------------
             Stat::make('Total OPD', $totalOpd)
                 ->description('Perangkat terdaftar')
                 ->descriptionIcon('heroicon-o-building-office-2')
                 ->color('gray'),
 
-            // ------------------------------------------------------------------
             // OPD Online (Uptime)
-            // ------------------------------------------------------------------
             Stat::make('Online', $onlineCount)
                 ->description($uptimePercent . '% dari total OPD')
                 ->descriptionIcon('heroicon-o-signal')
@@ -57,9 +53,7 @@ class OpdStatusOverview extends BaseWidget
                     $this->getOnlineChartData()
                 ),
 
-            // ------------------------------------------------------------------
             // OPD Offline (Downtime)
-            // ------------------------------------------------------------------
             Stat::make('Offline', $offlineCount)
                 ->description(
                     $offlineCount === 0
@@ -75,10 +69,8 @@ class OpdStatusOverview extends BaseWidget
         ];
     }
 
-    // -------------------------------------------------------------------------
     // Sparkline — jumlah OPD yang aktif per hari selama 7 hari terakhir
     // Digunakan sebagai chart kecil di stat "Online"
-    // -------------------------------------------------------------------------
 
     private function getOnlineChartData(): array
     {

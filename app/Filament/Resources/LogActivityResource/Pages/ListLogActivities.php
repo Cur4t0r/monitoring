@@ -20,10 +20,7 @@ class ListLogActivities extends ListRecords
 
     public string $opdName = 'Semua OPD';
 
-    // -------------------------------------------------------------------------
     // Header action — filter OPD
-    // -------------------------------------------------------------------------
-
     protected function getHeaderActions(): array
     {
         return [
@@ -52,10 +49,7 @@ class ListLogActivities extends ListRecords
         ];
     }
 
-    // -------------------------------------------------------------------------
     // Header widgets — grid 2×2
-    // -------------------------------------------------------------------------
-
     protected function getHeaderWidgets(): array
     {
         return [

@@ -4,7 +4,7 @@
             {{ $opd->nama_opd }}
         </h2>
         <p class="text-sm text-gray-400">
-            Detail pemakaian bandwidth berdasarkan data log dummy.
+            Detail pemakaian bandwidth berdasarkan data log.
         </p>
     </div>
 
@@ -13,21 +13,21 @@
         <div class="p-5 bg-gray-900 border border-gray-700 rounded-xl shadow-sm">
             <p class="text-sm text-gray-400">Max In</p>
             <p class="text-2xl font-bold text-blue-400">
-                {{ number_format($stats['max_in'] / 1_000_000, 2) }} Mbps
+                {{ $stats['max_in'] }} Mbps
             </p>
         </div>
 
         <div class="p-5 bg-gray-900 border border-gray-700 rounded-xl shadow-sm">
             <p class="text-sm text-gray-400">Average In</p>
             <p class="text-2xl font-bold text-amber-400">
-                {{ number_format($stats['avg_in'] / 1_000_000, 2) }} Mbps
+                {{ $stats['avg_in'] }} Mbps
             </p>
         </div>
 
         <div class="p-5 bg-gray-900 border border-gray-700 rounded-xl shadow-sm">
             <p class="text-sm text-gray-400">Current In</p>
             <p class="text-2xl font-bold text-green-400">
-                {{ number_format($stats['current_in'] / 1_000_000, 2) }} Mbps
+                {{ $stats['current_in'] }} Mbps
             </p>
         </div>
     </div>
@@ -37,21 +37,21 @@
         <div class="p-5 bg-gray-900 border border-gray-700 rounded-xl shadow-sm">
             <p class="text-sm text-gray-400">Max Out</p>
             <p class="text-2xl font-bold text-blue-400">
-                {{ number_format($stats['max_out'] / 1_000_000, 2) }} Mbps
+                {{ $stats['max_out'] }} Mbps
             </p>
         </div>
 
         <div class="p-5 bg-gray-900 border border-gray-700 rounded-xl shadow-sm">
             <p class="text-sm text-gray-400">Average Out</p>
             <p class="text-2xl font-bold text-amber-400">
-                {{ number_format($stats['avg_out'] / 1_000_000, 2) }} Mbps
+                {{ $stats['avg_out'] }} Mbps
             </p>
         </div>
 
         <div class="p-5 bg-gray-900 border border-gray-700 rounded-xl shadow-sm">
             <p class="text-sm text-gray-400">Current Out</p>
             <p class="text-2xl font-bold text-green-400">
-                {{ number_format($stats['current_out'] / 1_000_000, 2) }} Mbps
+                {{ $stats['current_out'] }} Mbps
             </p>
         </div>
     </div>

@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Helpers\BandwidthFormatter;
 use App\Models\LogActivity;
 use App\Models\Opd;
 use Carbon\Carbon;
@@ -100,6 +101,7 @@ class RekapBandwidthSheet implements
         $rows = collect();
         $no   = $this->startNo;
 
+        // Loop OPD + gabungkan dengan data aggregate & latest untuk membentuk baris tabel
         foreach ($opds as $opd) {
             $agg    = $aggregates->get($opd->id);
             $latest = $latests->get($opd->id);
@@ -107,12 +109,12 @@ class RekapBandwidthSheet implements
             $rows->push([
                 $no++,
                 $opd->nama_opd,
-                $this->formatBps((float) ($agg->max_in  ?? 0)),
-                $this->formatBps((float) ($agg->avg_in  ?? 0)),
-                $this->formatBps((float) ($latest->in_bps  ?? 0)),
-                $this->formatBps((float) ($agg->max_out ?? 0)),
-                $this->formatBps((float) ($agg->avg_out ?? 0)),
-                $this->formatBps((float) ($latest->out_bps ?? 0)),
+                BandwidthFormatter::format((float) ($agg->max_in  ?? 0)),
+                BandwidthFormatter::format((float) ($agg->avg_in  ?? 0)),
+                BandwidthFormatter::format((float) ($latest->in_bps  ?? 0)),
+                BandwidthFormatter::format((float) ($agg->max_out ?? 0)),
+                BandwidthFormatter::format((float) ($agg->avg_out ?? 0)),
+                BandwidthFormatter::format((float) ($latest->out_bps ?? 0)),
             ]);
         }
 
@@ -192,18 +194,5 @@ class RekapBandwidthSheet implements
             'yearly'  => now()->subYear(),
             default   => now()->subDay(),
         };
-    }
-
-    protected function formatBps(float $bps): string
-    {
-        if ($bps >= 1_000_000) {
-            return number_format($bps / 1_000_000, 2) . ' Mbps';
-        }
-
-        if ($bps >= 1_000) {
-            return number_format($bps / 1_000, 2) . ' Kbps';
-        }
-
-        return number_format($bps, 0) . ' bps';
     }
 }
