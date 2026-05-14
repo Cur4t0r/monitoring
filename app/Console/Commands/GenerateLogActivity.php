@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-// use App\Models\LogActivity;
 use App\Models\Opd;
+use App\Services\LogActivityService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -46,8 +46,8 @@ class GenerateLogActivity extends Command
         $rows = $opds->map(fn($opd) => [
             'opd_id'     => $opd->id,
             'timestamp'  => $timestamp,
-            'in_bps'     => rand(300_000, 40_000_000),   // 0.3 – 40 Mbps (sesuaikan range asli)
-            'out_bps'    => rand(300_000, 40_000_000),
+            'in_bps'     => rand(LogActivityService::BPS_MIN, LogActivityService::BPS_MAX),
+            'out_bps'    => rand(LogActivityService::BPS_MIN, LogActivityService::BPS_MAX),
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ])->toArray();

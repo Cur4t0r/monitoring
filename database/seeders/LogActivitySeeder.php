@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\LogActivity;
 use App\Models\Opd;
+use App\Services\LogActivityService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +39,9 @@ class LogActivitySeeder extends Seeder
 
         // Base bandwidth berbeda per OPD agar grafik tiap OPD punya karakter sendiri
         foreach ($opds as $i => $opd) {
-            $this->opdBaseMap[$opd->id] = 2_000_000
-                + ($i * (33_000_000 / max(1, $opds->count() - 1)));
+            $this->opdBaseMap[$opd->id] = LogActivityService::BPS_MIN
+                + ($i * ((LogActivityService::BPS_MAX - LogActivityService::BPS_MIN)
+                    / max(1, $opds->count() - 1)));
         }
 
         $this->command->getOutput()->progressStart($opds->count());

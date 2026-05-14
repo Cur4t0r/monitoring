@@ -6,7 +6,6 @@ use App\Services\LogActivityService;
 use App\Models\Opd;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Support\Facades\DB;
 
 class OpdStatusOverview extends BaseWidget
 {
@@ -40,7 +39,7 @@ class OpdStatusOverview extends BaseWidget
                 ->description($uptimePercent . '% dari total OPD')
                 ->descriptionIcon('heroicon-o-signal')
                 ->color($onlineCount === $totalOpd ? 'success' : 'warning')
-                ->chart($this->getOnlineChartData()), // Sparkline chart kecil
+                ->chart($service->getOnlineSparkline()),
 
             // OPD Offline (Downtime)
             Stat::make('Offline', $offlineCount)
@@ -56,29 +55,5 @@ class OpdStatusOverview extends BaseWidget
                 )
                 ->color($offlineCount === 0 ? 'success' : 'danger'),
         ];
-    }
-
-    // Sparkline — jumlah OPD yang aktif per hari selama 7 hari terakhir
-    // Digunakan sebagai chart kecil di stat "Online"
-
-    private function getOnlineChartData(): array
-    {
-        $days = collect();
-
-        for ($i = 6; $i >= 0; $i--) {
-            $date      = now()->subDays($i)->toDateString();
-            $dateStart = $date . ' 00:00:00';
-            $dateEnd   = $date . ' 23:59:59';
-
-            // Hitung OPD yang punya minimal 1 record di hari tersebut
-            $count = DB::table('log_activities')
-                ->whereBetween('timestamp', [$dateStart, $dateEnd])
-                ->distinct('opd_id')
-                ->count('opd_id');
-
-            $days->push($count);
-        }
-
-        return $days->toArray();
     }
 }

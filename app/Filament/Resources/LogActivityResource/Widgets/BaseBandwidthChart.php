@@ -2,8 +2,7 @@
 
 namespace App\Filament\Resources\LogActivityResource\Widgets;
 
-use App\Helpers\BandwidthFormatter;
-use App\Models\LogActivity;
+use App\Services\LogActivityService;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\HtmlString;
@@ -29,36 +28,11 @@ abstract class BaseBandwidthChart extends ChartWidget
     // Hitung stats Max / Avg / Current untuk periode aktif
     protected function computeStats(Carbon $from): array
     {
-        $agg = LogActivity::query()
-            ->when($this->opdId, fn($q) => $q->where('opd_id', $this->opdId))
-            ->where('timestamp', '>=', $from)
-            ->selectRaw('
-                MAX(in_bps)  AS max_in,
-                AVG(in_bps)  AS avg_in,
-                MAX(out_bps) AS max_out,
-                AVG(out_bps) AS avg_out
-            ')
-            ->first();
-
-        $latest = LogActivity::query()
-            ->when($this->opdId, fn($q) => $q->where('opd_id', $this->opdId))
-            ->latest('timestamp')
-            ->first();
-
-        return [
-            'max_in'      => BandwidthFormatter::format((float) ($agg->max_in  ?? 0)),
-            'avg_in'      => BandwidthFormatter::format((float) ($agg->avg_in  ?? 0)),
-            'current_in'  => BandwidthFormatter::format((float) ($latest->in_bps  ?? 0)),
-            'max_out'     => BandwidthFormatter::format((float) ($agg->max_out ?? 0)),
-            'avg_out'     => BandwidthFormatter::format((float) ($agg->avg_out ?? 0)),
-            'current_out' => BandwidthFormatter::format((float) ($latest->out_bps ?? 0)),
-        ];
+        return app(LogActivityService::class)->getFormattedStats($this->opdId, $from);
     }
 
-    // -------------------------------------------------------------------------
-    // Footer — Max / Avg / Current di bawah canvas
-    // -------------------------------------------------------------------------
 
+    // Footer — Max / Avg / Current di bawah canvas
     public function getFooter(): HtmlString
     {
         $s = $this->stats ?: $this->computeStats($this->getPeriodStart());

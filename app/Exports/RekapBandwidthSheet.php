@@ -2,9 +2,7 @@
 
 namespace App\Exports;
 
-use App\Helpers\BandwidthFormatter;
-use App\Models\LogActivity;
-use App\Models\Opd;
+use App\Services\LogActivityService;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -68,60 +66,28 @@ class RekapBandwidthSheet implements
     // Data baris per OPD untuk periode aktif (diambil dari DB dengan query aggregate)
     public function collection(): Collection
     {
-        $from = $this->getPeriodStart();
+        $allStats = app(LogActivityService::class)->getAllOpdsStats($this->getPeriodStart());
 
-        // Ambil semua OPD
-        $opds = Opd::orderBy('nama_opd')->get();
-
-        // Satu query aggregate per periode untuk semua OPD (menghindari N+1)
-        $aggregates = LogActivity::query()
-            ->where('timestamp', '>=', $from)
-            ->selectRaw('
-                opd_id,
-                MAX(in_bps)  AS max_in,
-                AVG(in_bps)  AS avg_in,
-                MAX(out_bps) AS max_out,
-                AVG(out_bps) AS avg_out
-            ')
-            ->groupBy('opd_id')
-            ->get()
-            ->keyBy('opd_id');
-
-        // "Current" = data terbaru per OPD (tidak dibatasi periode)
-        $latestIds = LogActivity::query()
-            ->selectRaw('MAX(id) AS id, opd_id')
-            ->groupBy('opd_id')
-            ->pluck('id');
-
-        $latests = LogActivity::query()
-            ->whereIn('id', $latestIds)
-            ->get()
-            ->keyBy('opd_id');
-
-        $rows = collect();
-        $no   = $this->startNo;
-
-        // Loop OPD + gabungkan dengan data aggregate & latest untuk membentuk baris tabel
-        foreach ($opds as $opd) {
-            $agg    = $aggregates->get($opd->id);
-            $latest = $latests->get($opd->id);
-
-            $rows->push([
-                $no++,
-                $opd->nama_opd,
-                BandwidthFormatter::format((float) ($agg->max_in  ?? 0)),
-                BandwidthFormatter::format((float) ($agg->avg_in  ?? 0)),
-                BandwidthFormatter::format((float) ($latest->in_bps  ?? 0)),
-                BandwidthFormatter::format((float) ($agg->max_out ?? 0)),
-                BandwidthFormatter::format((float) ($agg->avg_out ?? 0)),
-                BandwidthFormatter::format((float) ($latest->out_bps ?? 0)),
-            ]);
-        }
-
-        return $rows;
+        return $allStats
+            ->values()
+            ->map(function (array $stat, int $index) {
+                return [
+                    $index + $this->startNo,
+                    $stat['nama_opd'],
+                    $stat['max_in'],
+                    $stat['avg_in'],
+                    $stat['current_in'],
+                    $stat['max_out'],
+                    $stat['avg_out'],
+                    $stat['current_out'],
+                ];
+            });
     }
 
-    // Styling sheet (header warna, border, merge judul)
+    /**
+     * @param Worksheet $sheet
+     * @return void
+     */
     public function styles(Worksheet $sheet): void
     {
         $lastRow  = $sheet->getHighestRow();
