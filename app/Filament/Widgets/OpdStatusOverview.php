@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\LogActivity;
+use App\Services\LogActivityService;
 use App\Models\Opd;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -13,22 +13,14 @@ class OpdStatusOverview extends BaseWidget
     // Auto-refresh setiap 30 detik agar dashboard tetap update
     protected static ?string $pollingInterval = '30s';
 
+    // Hitung jumlah OPD total, online, dan offline untuk ditampilkan di widget
     protected function getStats(): array
     {
+        // Gunakan service untuk hitung jumlah OPD online/offline
+        // Online = punya record dalam 10 menit terakhir
+        $service   = app(LogActivityService::class);
         $totalOpd = Opd::count();
-
-        // OPD dianggap ONLINE jika punya record dalam 10 menit terakhir
-        // (toleransi 2× interval polling 5 menit)
-        $threshold = now()->subMinutes(10);
-
-        // Ambil opd_id yang punya log terbaru dalam threshold
-        $onlineOpdIds = LogActivity::query()
-            ->select('opd_id')
-            ->where('timestamp', '>=', $threshold)
-            ->distinct()
-            ->pluck('opd_id');
-
-        $onlineCount  = $onlineOpdIds->count();
+        $onlineCount = $service->getOnlineCount();
         $offlineCount = $totalOpd - $onlineCount;
 
         // Persentase uptime
@@ -48,10 +40,7 @@ class OpdStatusOverview extends BaseWidget
                 ->description($uptimePercent . '% dari total OPD')
                 ->descriptionIcon('heroicon-o-signal')
                 ->color($onlineCount === $totalOpd ? 'success' : 'warning')
-                ->chart(
-                    // Sparkline 7 hari — jumlah OPD online per hari
-                    $this->getOnlineChartData()
-                ),
+                ->chart($this->getOnlineChartData()), // Sparkline chart kecil
 
             // OPD Offline (Downtime)
             Stat::make('Offline', $offlineCount)
@@ -82,7 +71,7 @@ class OpdStatusOverview extends BaseWidget
             $dateEnd   = $date . ' 23:59:59';
 
             // Hitung OPD yang punya minimal 1 record di hari tersebut
-            $count = LogActivity::query()
+            $count = DB::table('log_activities')
                 ->whereBetween('timestamp', [$dateStart, $dateEnd])
                 ->distinct('opd_id')
                 ->count('opd_id');

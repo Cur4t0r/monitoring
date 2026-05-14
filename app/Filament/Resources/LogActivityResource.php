@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Exports\RekapBandwidthExport;
 use App\Filament\Resources\LogActivityResource\Pages;
-use App\Helpers\BandwidthFormatter;
+use App\Services\LogActivityService;
 use App\Models\LogActivity;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Form;
@@ -93,7 +93,7 @@ class LogActivityResource extends Resource
             ])
             ->headerActions([
                 // Export ke Excel dengan pilihan periode (Harian, Mingguan, Bulanan, Tahunan)
-                Tables\Actions\ExportAction::make('rekapBandwidth')
+                Tables\Actions\Action::make('rekapBandwidth')
                     ->label('Rekap Bandwidth')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
@@ -162,31 +162,13 @@ class LogActivityResource extends Resource
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->modalContent(function ($record) {
-                        $opd = $record->opd;
+                        // Ambil stats detail (max/avg/current in/out) untuk OPD ini
+                        $service = app(LogActivityService::class);
+                        $stats   = $service->getDetailStats($record->opd);
 
-                        $aggregate = $opd->logActivities()
-                            ->selectRaw('
-                                MAX(in_bps) as max_in,
-                                AVG(in_bps) as avg_in,
-                                MAX(out_bps) as max_out,
-                                AVG(out_bps) as avg_out')
-                            ->first();
-
-                        $latest = $opd->logActivities()
-                            ->latest('timestamp')
-                            ->first();
-
-                        $stats = [
-                            'max_in'      => BandwidthFormatter::format((float) ($aggregate->max_in  ?? 0)),
-                            'avg_in'      => BandwidthFormatter::format((float) ($aggregate->avg_in  ?? 0)),
-                            'current_in'  => BandwidthFormatter::format((float) ($latest->in_bps     ?? 0)),
-                            'max_out'     => BandwidthFormatter::format((float) ($aggregate->max_out ?? 0)),
-                            'avg_out'     => BandwidthFormatter::format((float) ($aggregate->avg_out ?? 0)),
-                            'current_out' => BandwidthFormatter::format((float) ($latest->out_bps    ?? 0)),
-                        ];
 
                         return view('filament.log-activity.detail', [
-                            'opd' => $opd,
+                            'opd' => $record->opd,
                             'record' => $record,
                             'stats' => $stats,
                         ]);
