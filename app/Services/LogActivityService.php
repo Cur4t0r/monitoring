@@ -24,6 +24,16 @@ class LogActivityService
     public const BPS_MAX = 40_000_000;
 
     /**
+     * Raw SQL untuk select agregat stats (max/avg in/out) dalam satu query.
+     */
+    private const STATS_RAW = '
+        MAX(in_bps)  AS max_in,
+        AVG(in_bps)  AS avg_in,
+        MAX(out_bps) AS max_out,
+        AVG(out_bps) AS avg_out
+    ';
+
+    /**
      * Base query builder untuk LogActivity, dengan optional filter OPD.
      * Digunakan sebagai dasar untuk berbagai query stats di service ini.
      */
@@ -34,24 +44,19 @@ class LogActivityService
     }
 
     /**
-     * Hitung stats agregat untuk periode tertentu (daily/weekly/monthly/yearly).
-     * Mengembalikan object dengan nilai mentah (bps), caller bisa format sesuai kebutuhan
+     * Fetch data agregat (max/avg in/out) untuk OPD tertentu dalam periode waktu tertentu.
      */
-    private function fetchAggregate(?int $opdId, Carbon $from, ?Carbon $until = null): object
+    private function fetchAggregate(?int $opdId, ?Carbon $from = null, ?Carbon $until = null): object
     {
         return $this->baseQuery($opdId)
-            ->whereBetween('timestamp', [$from, $until ?? now()])
-            ->selectRaw('
-                MAX(in_bps)  AS max_in,
-                AVG(in_bps)  AS avg_in,
-                MAX(out_bps) AS max_out,
-                AVG(out_bps) AS avg_out
-            ')
-            ->first();
+            ->when($from, fn($q) => $q->where('timestamp', '>=', $from))
+            ->when($until, fn($q) => $q->where('timestamp', '<=', $until))
+            ->selectRaw(self::STATS_RAW)
+            ->first() ?? (object) []; // Pastikan selalu return object, meski tidak ada data
     }
 
     /**
-     * Fetch record LogActivity terbaru untuk OPD tertentu (atau global jika OPD null).
+     * Fetch record LogActivity terbaru untuk OPD tertentu, untuk dapatkan nilai current in/out.
      */
     private function fetchLatest(?int $opdId): ?LogActivity
     {
@@ -59,25 +64,35 @@ class LogActivityService
     }
 
     /**
-     * Hitung stats agregat untuk periode tertentu, dengan opsi format langsung.
-     * Jika $formatted = true, kembalikan nilai sudah terformat siap ditampilkan
+     * Build array stats mentah (bps) dari hasil query agregat dan latest, dengan handling null/default.
      */
-    private function buildRawStats(object $aggregate, ?LogActivity $latest): array
+    private function buildRawStats(?object $aggregate, ?object $latest): array
     {
         return [
-            'max_in'      => (float) ($aggregate->max_in  ?? 0),
-            'avg_in'      => (float) ($aggregate->avg_in  ?? 0),
-            'current_in'  => (float) ($latest->in_bps     ?? 0),
-            'max_out'     => (float) ($aggregate->max_out ?? 0),
-            'avg_out'     => (float) ($aggregate->avg_out ?? 0),
-            'current_out' => (float) ($latest->out_bps    ?? 0),
+            'max_in'      => (float) ($aggregate?->max_in  ?? 0),
+            'avg_in'      => (float) ($aggregate?->avg_in  ?? 0),
+            'current_in'  => (float) ($latest?->in_bps     ?? 0),
+            'max_out'     => (float) ($aggregate?->max_out ?? 0),
+            'avg_out'     => (float) ($aggregate?->avg_out ?? 0),
+            'current_out' => (float) ($latest?->out_bps    ?? 0),
         ];
+    }
+
+    /**
+     * Format array stats menjadi unit yang lebih mudah dibaca (Kbps/Mbps).
+     */
+    private function formatStatsArray(array $rawStats): array
+    {
+        return array_map(
+            fn(float $bps) => BandwidthFormatter::format($bps),
+            $rawStats
+        );
     }
 
     /**
      * Public method untuk dipanggil dari luar service, mengembalikan stats agregat dalam format mentah (bps).
      */
-    public function getAggregateStats(?int $opdId, Carbon $from, ?Carbon $until = null): array
+    public function getAggregateStats(?int $opdId, ?Carbon $from = null, ?Carbon $until = null): array
     {
         return $this->buildRawStats(
             $this->fetchAggregate($opdId, $from, $until),
@@ -86,76 +101,67 @@ class LogActivityService
     }
 
     /**
-     * Public method untuk dipanggil dari luar service, mengembalikan stats agregat dalam format siap tampil (Kbps/Mbps).
+     * Public method untuk dipanggil dari luar service, mengembalikan stats agregat dalam format terformat (Kbps/Mbps).
      */
-    public function getFormattedStats(?int $opdId, Carbon $from, ?Carbon $until = null): array
+    public function getFormattedStats(?int $opdId, ?Carbon $from = null, ?Carbon $until = null): array
     {
-        return array_map(
-            fn(float $bps) => BandwidthFormatter::format($bps),
+        return $this->formatStatsArray(
             $this->getAggregateStats($opdId, $from, $until)
         );
     }
 
     /**
-     * Public method untuk fetch stats detail (max/avg/current in/out) untuk OPD tertentu, dengan periode dari awal log sampai sekarang.
+     * Public method untuk fetch stats detail (max/avg/current in/out) untuk OPD tertentu.
      */
     public function getDetailStats(Opd $opd): array
     {
-        // Periode dari awal log OPD ini sampai sekarang
-        return $this->getFormattedStats(
-            opdId: $opd->id,
-            from: Carbon::parse(
-                $opd->logActivities()->min('timestamp') ?? now()->subYear()
-            ),
-        );
+        return $this->getFormattedStats($opd->id, null, null);
     }
 
     /**
-     * Public method untuk fetch stats agregat untuk semua OPD dalam periode tertentu, dengan opsi format langsung.
+     * Public method untuk fetch stats agregat untuk semua OPD dalam periode waktu tertentu, dengan format terformat (Kbps/Mbps) dan tambahan nama OPD.
+     * Digunakan untuk export Excel, sehingga return Collection dengan key = opd_id dan value = array stats + nama_opd.
+     * Implementasi efisien dengan hanya 2 query ke DB (satu untuk agregat, satu untuk latest), lalu gabungkan di PHP.
+     * Hasilnya adalah Collection seperti: [opd_id => ['nama_opd' => '...', 'max_in' => '...', 'avg_in' => '...', ...], ...]
+     * Jika $from = null, maka fetch untuk semua data tanpa filter waktu.
+     * Jika $from diberikan, maka fetch hanya untuk data sejak $from hingga sekarang.
      */
-    public function getAllOpdsStats(Carbon $from): Collection
+    public function getAllOpdsStats(?Carbon $from = null): Collection
     {
-        // Satu query aggregate untuk semua OPD
+        // Query pertama untuk fetch agregat max/avg in/out per OPD dalam periode tertentu
         $aggregates = LogActivity::query()
-            ->where('timestamp', '>=', $from)
-            ->selectRaw('
-                opd_id,
-                MAX(in_bps)  AS max_in,
-                AVG(in_bps)  AS avg_in,
-                MAX(out_bps) AS max_out,
-                AVG(out_bps) AS avg_out
-            ')
+            ->when($from, fn($q) => $q->where('timestamp', '>=', $from))
+            ->selectRaw('opd_id, ' . self::STATS_RAW)
             ->groupBy('opd_id')
             ->get()
             ->keyBy('opd_id');
 
-        // Satu query latest untuk semua OPD
+        // Satu query latest untuk semua OPD yang punya record dalam periode tersebut, untuk dapatkan nilai current in/out
         $latestIds = LogActivity::query()
+            ->when($from, fn($q) => $q->where('timestamp', '>=', $from))
             ->selectRaw('MAX(id) AS id, opd_id')
             ->groupBy('opd_id')
             ->pluck('id');
 
+        // Query untuk fetch record LogActivity terbaru per OPD berdasarkan id yang sudah didapatkan di atas, lalu keyBy opd_id untuk memudahkan penggabungan dengan data agregat
         $latests = LogActivity::query()
             ->whereIn('id', $latestIds)
             ->get()
             ->keyBy('opd_id');
 
-        // Gabungkan dan format per OPD
+        // Gabungkan data agregat dan latest dengan daftar OPD, lalu format hasilnya menjadi array stats terformat + nama_opd
         return Opd::orderBy('nama_opd')->get()->mapWithKeys(function (Opd $opd) use ($aggregates, $latests) {
             $agg    = $aggregates->get($opd->id);
             $latest = $latests->get($opd->id);
 
-            return [
-                $opd->id => [
-                    'nama_opd'    => $opd->nama_opd,
-                    'max_in'      => BandwidthFormatter::format((float) ($agg->max_in   ?? 0)),
-                    'avg_in'      => BandwidthFormatter::format((float) ($agg->avg_in   ?? 0)),
-                    'current_in'  => BandwidthFormatter::format((float) ($latest->in_bps  ?? 0)),
-                    'max_out'     => BandwidthFormatter::format((float) ($agg->max_out  ?? 0)),
-                    'avg_out'     => BandwidthFormatter::format((float) ($agg->avg_out  ?? 0)),
-                    'current_out' => BandwidthFormatter::format((float) ($latest->out_bps ?? 0)),
-                ],
-            ];
+            // Re-use logic pembentukan array dan formatter
+            $rawStats       = $this->buildRawStats($agg, $latest);
+            $formattedStats = $this->formatStatsArray($rawStats);
+
+            // Tambahkan nama OPD setelah di-format agar bisa langsung digunakan untuk export atau tampilan
+            $formattedStats['nama_opd'] = $opd->nama_opd;
+
+            return [$opd->id => $formattedStats];
         });
     }
 
