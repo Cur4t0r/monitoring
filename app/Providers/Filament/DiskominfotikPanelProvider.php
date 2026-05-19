@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Widgets\OpdStatusOverview;
+use App\Filament\Widgets\UpcomingMaintenanceWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -11,13 +12,13 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 
 class DiskominfotikPanelProvider extends PanelProvider
 {
@@ -42,6 +43,18 @@ class DiskominfotikPanelProvider extends PanelProvider
                 // Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
                 OpdStatusOverview::class,
+                UpcomingMaintenanceWidget::class,
+            ])
+            ->plugins([
+                FilamentFullCalendarPlugin::make()
+                    ->selectable(true)
+                    ->editable(false)
+                    ->config([
+                        'initialView' => 'dayGridMonth',
+                        'firstDay'    => 1,
+                        'locale'      => 'id',
+                        'height'      => 'auto',
+                    ]),
             ])
             ->middleware([
                 EncryptCookies::class,
