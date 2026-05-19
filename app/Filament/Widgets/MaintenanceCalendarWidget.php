@@ -99,6 +99,7 @@ class MaintenanceCalendarWidget extends FullCalendarWidget
                 ->label('Tambah Maintenance')
                 ->mountUsing(function (Form $form, array $arguments) {
                     $form->fill([
+                        // Pre-fill tanggal dari tanggal yang diklik di kalender
                         'scheduled_at' => $arguments['start'] ?? now(),
                     ]);
                 }),

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Daftarkan widget kalender maintenance secara manual
+        Livewire::component(
+            'app.filament.widgets.maintenance-calendar-widget',
+            \App\Filament\Widgets\MaintenanceCalendarWidget::class
+        );
     }
 }

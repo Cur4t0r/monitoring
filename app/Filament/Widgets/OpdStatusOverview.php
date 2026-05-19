@@ -12,6 +12,11 @@ class OpdStatusOverview extends BaseWidget
     // Auto-refresh setiap 30 detik agar dashboard tetap update
     protected static ?string $pollingInterval = '30s';
 
+    protected static ?int $sort = 1;
+
+    // Full width — selalu memenuhi seluruh lebar grid dashboard
+    protected int | string | array $columnSpan = 'full';
+
     // Hitung jumlah OPD total, online, dan offline untuk ditampilkan di widget
     protected function getStats(): array
     {

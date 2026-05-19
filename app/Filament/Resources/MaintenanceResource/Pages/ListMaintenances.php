@@ -11,13 +11,13 @@ class ListMaintenances extends ListRecords
 {
     protected static string $resource = MaintenanceResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make()
-                ->label('New Maintenance'),
-        ];
-    }
+    // protected function getHeaderActions(): array
+    // {
+    //     return [
+    //         Actions\CreateAction::make()
+    //             ->label('New Maintenance'),
+    //     ];
+    // }
 
     protected function getHeaderWidgets(): array
     {
