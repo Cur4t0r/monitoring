@@ -78,13 +78,7 @@ class SystemAlertChartWidget extends ChartWidget
                     ],
                 ],
                 'tooltip' => [
-                    'callbacks' => [
-                        'label' => 'function(context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const pct = total > 0 ? Math.round(context.parsed / total * 100) : 0;
-                            return " " + context.label + ": " + context.parsed + " (" + pct + "%)";
-                        }',
-                    ],
+                    'enabled' => true,
                 ],
             ],
             'scales' => [

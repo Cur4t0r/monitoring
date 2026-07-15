@@ -89,7 +89,8 @@ class SystemAlertResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\BadgeColumn::make('severity')
+                Tables\Columns\TextColumn::make('severity')
+                    ->badge()
                     ->label('Level')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'critical' => 'Critical',
@@ -123,7 +124,8 @@ class SystemAlertResource extends Resource
                     ->default('—')
                     ->sortable(),
 
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
                     ->label('Status')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'active'       => 'Aktif',
